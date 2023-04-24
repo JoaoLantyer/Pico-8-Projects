@@ -8,6 +8,7 @@ function _init()
 	palt(0, false)
 	gravity=0.3
 	friction=0.7
+	seconds=0
 
 	poke(0x5f5c,255)
 	poke(0x5f5d,255)
@@ -26,6 +27,7 @@ function _init()
 		acc=0.5,
 		boost=4,
 		anim=0,
+		frame_duration = 1,
 		running=false,
 		jumping=false,
 		falling=false,
@@ -67,6 +69,8 @@ function _update()
 	 spr(player.sp, player.x, player.y,1,1,player.fx)
 	 spr(playerhead.sp,player.x,(player.y-8),1,1,playerhead.fx)
 		spr(enemyblob.sp,enemyblob.x,enemyblob.y,1,1,enemyblob.fx)
+
+		print(time())
 
 	if player.jumping then
 		print("jumping")
@@ -250,15 +254,22 @@ function player_animate()
 			end
 		end
 	else --player idle
-		if time()-player.anim>0.5 then
-			player.anim=time()
-			playerhead.sp+=1
-			player.sp+=1
-			if player.sp>20 then
-				playerhead.sp=1
-				player.sp=17
+			if player.sp~=17 then
+				player.frame_duration=0.3
+			else
+				player.frame_duration=2
 			end
-		end
+
+			if time()-player.anim>player.frame_duration then
+
+				player.anim=time()
+				playerhead.sp+=1
+				player.sp+=1
+					if player.sp>20 then
+					playerhead.sp=1
+					player.sp=17
+					end
+			end
 	end
 end
 
@@ -284,8 +295,8 @@ c090090cc088880cc088880c022220ccc088880cc088880c08899980c088880c08899980c088880c
 0a0cc0a00889998008899980c088880c08899980088999800899999008899980089999900889998008899980c000cccccccccccccccccccccccccccccccccccc
 0a0cc0a008a9a9a008a9a9a00889a98008a9a9a008a9a9a009a2a2a008a9a9a009a2a2a008a9a9a008a9a9a0022200cccccccccccccccccccccccccccccccccc
 c090090c099292900992929008a9a9a0099292900992929009e4f4e00992929009e4f4e00992929009929290c088880ccccccccccccccccccccccccccccccccc
-090aa09009e4f4e009e4f4e00992929009e4f4e009e4f4e0c09fff0c09e4f4e0c09fff0c09e4f4e009e4f4e008899980cccccccccccccccccccccccccccccccc
-c0c00c0cc09fff0cc09fff0c09e4f4e0c09fff0cc09fff0cc022820cc09fff0cc022820cc09fff0cc09fff0c08a9a9a0cccccccccccccccccccccccccccccccc
+090aa09009e4f4e009e4f4e0099f9f9009e4f4e009e4f4e0c09fff0c09e4f4e0c09fff0c09e4f4e009e4f4e008899980cccccccccccccccccccccccccccccccc
+c0c00c0cc09fff0cc09fff0c09e2f2e0c09fff0cc09fff0cc022820cc09fff0cc022820cc09fff0cc09fff0c08a9a9a0cccccccccccccccccccccccccccccccc
 ccccccccc022820cc022820cc09ff770c022820cc022820cc0778260c022820c06288770c022820cc022820c099f9f90cccccccccccccccccccccccccccccccc
 cc000ccc0228882002288770022287600228877002288820c0768860022888200728876002288820c077826009e2f2e0cccccccccccccccccccccccccccccccc
 c08820cc07688860076887600768820c0768876007688860c049a90c07688860c049a00c07688860c0768860c077f770cccccccccccccccccccccccccccccccc
