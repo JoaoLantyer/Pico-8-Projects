@@ -4,11 +4,10 @@ __lua__
 --variables
 function _init()
 	
-	palt(12, true) 
+	palt(12, true)
 	palt(0, false)
 	gravity=0.3
 	friction=0.7
-	seconds=0
 
 	poke(0x5f5c,255)
 	poke(0x5f5d,255)
@@ -22,10 +21,11 @@ function _init()
 		fx=false,
 		dx=0,
 		dy=0,
-		max_dx=1.5,
-		max_dy=3,
+		max_dx=2,
+		max_dy=5,
 		acc=0.5,
-		boost=4,
+		boost=3.5,
+		jmp_counter=2,
 		anim=0,
 		frame_duration = 1,
 		running=false,
@@ -41,15 +41,35 @@ function _init()
 		y=(player.y+8),
 		fx=false
 		}
+
+		effects={
+			sp=0,
+			x=player.x,
+			y=player.y+16,
+			w=0,
+			h=0
+		}
 		
-	enemyblob={
-		sp=032,
+	blob={
+		sp=32,
 		x=64,
 		y=80,
 		fx=false,
 		anim=0,
+		frame_duration=0.1,
 		first_frame=032,
 		last_frame=35
+		}
+		
+		froggy={
+		sp=48,
+		x=80,
+		y=80,
+		fx=false,
+		anim=0,
+		frame_duration=0.3,
+		first_frame=48,
+		last_frame=49
 		}
 		
 		--simple camera
@@ -73,7 +93,9 @@ function _init()
 function _update()
 	player_update()
     player_animate()
-	enemies_animate()
+	blob.anim, blob.sp=enemies_animate(blob.anim, blob.frame_duration, blob.sp, blob.last_frame, blob.first_frame)
+	froggy.anim, froggy.sp=enemies_animate(froggy.anim, froggy.frame_duration, froggy.sp, froggy.last_frame, froggy.first_frame)
+	get_item()
 	
 	--simple camera
 	cam_x=player.x-64+(player.w/2)
@@ -86,14 +108,15 @@ function _update()
 	camera(cam_x,0)
 
 	end
-   
+
  function _draw()	
 	 cls(12)
 	 map(0,0)
 	 spr(player.sp, player.x, player.y,1,1,player.fx)
 	 spr(playerbody.sp,player.x,(player.y+8),1,1,playerbody.fx)
-		spr(enemyblob.sp,enemyblob.x,enemyblob.y,1,1,enemyblob.fx)
-
+	 spr(blob.sp,blob.x,blob.y,1,1,blob.fx)
+	 spr(froggy.sp,froggy.x,froggy.y,1,1,froggy.fx)
+		
 		print(time())
 
 	if player.jumping then
@@ -117,13 +140,23 @@ function _update()
 	 print(player.dy)
 	 print(player.dx)
 
+	 print(cell_value,80,10)
+	 print(cell_value2,80,18)
+	 print(cell_value3,80,26)
+	 print(cell_value4,80,34)
+	 print(cell_value5,80,42)
+	 print(cell_value6,80,50)
+
 --------------------test------------------------
 	 rect(x1r,y1r,x2r,y2r,7)
 	 print("⬅️= "..collide_l,player.x,player.y-10)
 	 print("➡️= "..collide_r,player.x,player.y-16)
 	 print("⬆️= "..collide_u,player.x,player.y-22)
 	 print("⬇️= "..collide_d,player.x,player.y-28)
+	 
  end
+ 
+ 
 -->8
 --collisions
 
@@ -197,19 +230,19 @@ function player_update()
 	
 	--controls
 	if btn(⬅️) and not btn(⬇️) then
-			player.dx-=player.acc
-			player.running=true
-			player.fx=true
-			playerbody.fx=true
+		player.dx-=player.acc
+		player.running=true
+		player.fx=true
+		playerbody.fx=true
 	end
 	
 	if btn(➡️) and not btn(⬇️) then
-			player.dx+=player.acc
-			player.running=true
-			player.fx=false
-			playerbody.fx=false	
-			end
-	
+		player.dx+=player.acc
+		player.running=true
+		player.fx=false
+		playerbody.fx=false	
+	end
+
 	if player.running 
 	and not btn(⬅️) 
 	and not btn(➡️) 
@@ -231,15 +264,24 @@ function player_update()
 	end
 	
 	--jump
-	if btnp(❎) and player.landed then
-		if btn(⬅️) then
-			player.dx-=player.acc
-		elseif btn(➡️) then
-			player.dx+=player.acc
+
+	if player.landed then
+		player.jmp_counter=2
 	end
+
+	if btnp(❎) then
+		if player.jmp_counter>0 then
+			player.jmp_counter-=1
 			player.dy-=player.boost
 			player.landed=false
+			
+			if btn(⬅️) then
+				player.dx-=player.acc
+			elseif btn(➡️) then
+				player.dx+=player.acc
 		end
+		end
+	end
 		
 	--check collision up and down
 	if player.dy>0 then
@@ -318,8 +360,14 @@ end
 
 function player_animate()
 	if player.jumping and not player.crouching then
+		if player.jmp_counter == 0 then
+		player.sp=12
+		playerbody.sp=28
+		else
 		player.sp=6
 		playerbody.sp=22
+
+		end
 	
 	elseif player.falling and not player.crouching then
 		player.sp=10
@@ -330,6 +378,11 @@ function player_animate()
 		playerbody.sp=27
 		
 	elseif player.running then
+
+		if btn(⬅️) and btn(➡️) then
+			player.sp=5
+			playerbody.sp=21
+		end
 
 		if btnp(⬅️) or btnp(➡️) then
 			player.sp=6
@@ -371,40 +424,86 @@ end
 -->8
 -- enemies
 
-function enemies_animate()
-	if time()-enemyblob.anim>.1 then
-		enemyblob.anim=time()
-		enemyblob.sp+=1
-		if enemyblob.sp>enemyblob.last_frame then
-			enemyblob.sp=enemyblob.first_frame
+function enemies_animate(anim, fd, sp, lf, ff) -- Animation, Frame duration, Sprite, Last frame, First frame
+	if time()-anim>fd then
+		anim=time()
+		sp+=1
+		if sp>lf then                               
+			sp=ff
+		end
+	end
+	return anim, sp
+end
+
+-->8
+-- items
+
+function get_item()
+	cell_value = mget((player.x/8),(player.y/8+1))
+	cell_value2= mget((player.x/8+1),(player.y/8+1))
+	cell_value3= mget((player.x/8-1),(player.y/8+1))
+	cell_value4= mget((player.x/8),(player.y/8))
+	cell_value5= mget((player.x/8+1),(player.y/8))
+	cell_value6= mget((player.x/8-1),(player.y/8))
+	cell_value7= mget((player.x/8),(player.y/8-1))
+	cell_value8= mget((player.x/8),(player.y/8+2))
+
+	if collide_map(player, "left", 4)
+	or collide_map(player, "right", 4)
+	or collide_map(player, "up", 4)
+	or collide_map(player, "down", 4)  then
+		if cell_value == 70 or cell_value == 71 or cell_value == 72 or cell_value == 73 then
+			mset((player.x/8),(player.y/8+1), 69)
+			sfx(0)
+		elseif cell_value2 == 70 or cell_value2 == 71 or cell_value2 == 72 or cell_value2 == 73 then
+			mset((player.x/8+1),(player.y/8+1), 69)
+			sfx(0)
+		elseif cell_value3 == 70 or cell_value3 == 71 or cell_value3 == 72 or cell_value3 == 73 then
+			mset((player.x/8-1),(player.y/8+1), 69)
+			sfx(0)
+		elseif cell_value4 == 70 or cell_value4 == 71 or cell_value4 == 72 or cell_value4 == 73 then
+			mset((player.x/8),(player.y/8), 69)
+			sfx(0)
+		elseif cell_value5 == 70 or cell_value5 == 71 or cell_value5 == 72 or cell_value5 == 73 then
+			mset((player.x/8+1),(player.y/8),69)
+			sfx(0)
+		elseif cell_value6 == 70 or cell_value6 == 71 or cell_value6 == 72 or cell_value6 == 73 then
+			mset((player.x/8-1),(player.y/8),69)
+			sfx(0)
+		elseif cell_value7 == 70 or cell_value7 == 71 or cell_value7 == 72 or cell_value7 == 73 then
+			mset((player.x/8),(player.y/8-1),69)
+			sfx(0)
+		elseif cell_value8 == 70 or cell_value8 == 71 or cell_value8 == 72 or cell_value8 == 73 then
+			mset((player.x/8),(player.y/8+2),69)
+			sfx(0)
 		end
 	end
 end
 __gfx__
-c0c00c0cc000ccccc000ccccc0ccccccc000ccccc000ccccc00000ccc000ccccc00000ccc000ccccc000cccccccccccccccccccccccccccccccccccccccccccc
-090aa090022200cc022200cc02000ccc022200cc022200cc0288880c022200cc0288880c022200cc022200cccccccccccccccccccccccccccccccccccccccccc
-c090090cc088880cc088880c022220ccc088880cc088880c08899980c088880c08899980c088880cc088880ccccccccccccccccccccccccccccccccccccccccc
-0a0cc0a00889998008899980c088880c08899980088999800899999008899980089999900889998008899980c000cccccccccccccccccccccccccccccccccccc
-0a0cc0a008a9a9a008a9a9a00889a98008a9a9a008a9a9a009a2a2a008a9a9a009a2a2a008a9a9a008a9a9a0022200cccccccccccccccccccccccccccccccccc
-c090090c099292900992929008a9a9a0099292900992929009e4f4e00992929009e4f4e00992929009929290c088880ccccccccccccccccccccccccccccccccc
-090aa09009e4f4e009e4f4e0099f9f9009e4f4e009e4f4e0c09fff0c09e4f4e0c09fff0c09e4f4e009e4f4e008899980cccccccccccccccccccccccccccccccc
-c0c00c0cc09fff0cc09fff0c09e2f2e0c09fff0cc09fff0cc022820cc09fff0cc022820cc09fff0cc09fff0c08a9a9a0cccccccccccccccccccccccccccccccc
-ccccccccc022820cc022820cc09ff770c022820cc022820cc0778260c022820c06288770c022820cc022820c099f9f90cccccccccccccccccccccccccccccccc
-cc000ccc0228882002288770022287600228877002288820c0768860022888200728876002288820c077826009e2f2e0cccccccccccccccccccccccccccccccc
-c08820cc07688860076887600768820c0768876007688860c049a90c07688860c049a00c07688860c0768860c077f770cccccccccccccccccccccccccccccccc
-08a9820c0779a9600779a90c0779a90c0779a90c0779a960028884400779a960c028440c0779a960c049a90c02672760cccccccccccccccccccccccccccccccc
-08aa9820c088880cc088880cc088880cc088880cc088880c05504220c088880cc084220cc088880c028884400829a920cccccccccccccccccccccccccccccccc
-c088200cc0240240c0240240c0240240c0240240c0240240c000220cc0240240c04220ccc0240240055042200288880ccccccccccccccccccccccccccccccccc
-cc000cccc0440440c0440440c0440440c0440440c0440440cccc00ccc0440440cc000cccc0440440c000220c02442440cccccccccccccccccccccccccccccccc
+c0c00c0cc000ccccc000ccccc0ccccccc000ccccc000ccccc00000ccc000ccccc00000ccc000ccccc000ccccccccccccc00000cccccccccccccccccccccccccc
+090aa090022200cc022200cc02000ccc022200cc022200cc0288880c022200cc0288880c022200cc022200cccccccccc0288880ccccccccccccccccccccccccc
+c090090cc088880cc088880c022220ccc088880cc088880c08899980c088880c08899980c088880cc088880ccccccccc08899980cccccccccccccccccccccccc
+0a0cc0a00889998008899980c088880c08899980088999800899999008899980089999900889998008899980c000cccc08999990cccccccccccccccccccccccc
+0a0cc0a008a9a9a008a9a9a00889a98008a9a9a008a9a9a009a2a2a008a9a9a009a2a2a008a9a9a008a9a9a0022200cc09a2a270cccccccccccccccccccccccc
+c090090c099292900992929008a9a9a0099292900992929009e4f4e00992929009e4f4e00992929009929290c088880c09e4f460cccccccccccccccccccccccc
+090aa09009e4f4e009e4f4e0099f9f9009e4f4e009e4f4e0c09fff0c09e4f4e0c09fff0c09e4f4e009e4f4e008899980c09fff20cccccccccccccccccccccccc
+c0c00c0cc09fff0cc09fff0c09e2f2e0c09fff0cc09fff0cc022820cc09fff0cc022820cc09fff0cc09fff0c08a9a9a0c0228220cccccccccccccccccccccccc
+ccccccccc022820cc022820cc09ff770c022820cc022820cc0778260c022820c06288770c022820cc022820c099f9f900628880ccccccccccccccccccccccccc
+cc000ccc0228882002288770022287600228877002288820c0768860022888200728876002288820c077826009e2f2e00728880ccccccccccccccccccccccccc
+c08820cc07688860076887600768820c0768876007688860c049a90c07688860c049a00c07688860c0768860c077f770c049a00ccccccccccccccccccccccccc
+08a9820c0779a9600779a90c0779a90c0779a90c0779a960028884400779a960c028440c0779a960c049a90c02672760c028440ccccccccccccccccccccccccc
+08aa9820c088880cc088880cc088880cc088880cc088880c05504220c088880cc084220cc088880c028884400829a920c084220ccccccccccccccccccccccccc
+c088200cc0240240c0240240c0240240c0240240c0240240c000220cc0240240c04220ccc0240240055042200288880cc04220cccccccccccccccccccccccccc
+cc000cccc0440440c0440440c0440440c0440440c0440440cccc00ccc0440440cc000cccc0440440c000220c02442440cc000ccccccccccccccccccccccccccc
 ccccccccc0000000c0000000c0000000c0000000c0000000ccccccccc0000000ccccccccc0000000cccc00ccc000000ccccccccccccccccccccccccccccccccc
 ccccccccccccccccccccccccccccccccc0cccc0ccc0cc0cccccc0ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cccccccccccccccccccccccccc0000cc0e0cc0e0c080080cccc080cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-cc0000ccccccccccccccccccc0ffff0cc0c00c0cc088880000c080cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c0ffff0ccc0000cccccccccc0e0f0fe0cc0ff0ccc0181e0888080ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-0e0f0ee0c0ffff0cc00000cc0e1f1ee0cc0ee0cccc0228888880cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-081e18e0081f18e00efffe0c081e18e0c0c00c0ccc0882882880cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-0eeeeee00eeeeee0081e18e00eeeeee00e0cc0e0c0822880880ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c000000cc000000cc000000cc000000cc0cccc0ccc00000c00cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cc0000ccccccccccccccccccc0ffff0cc0c00c0cc088880000c080ccccc00ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c0ffff0ccc0000cccccccccc0e0f0fe0cc0ff0ccc0181e0888080ccccc0770cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+0e0f0ee0c0ffff0cc00000cc0e1f1ee0cc0ee0cccc0228888880ccccc076670ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+081e18e0081f18e00efffe0c081e18e0c0c00c0ccc0882882880cccc06077060cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+0eeeeee00eeeeee0081e18e00eeeeee00e0cc0e0c0822880880cccccc066660ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c000000cc000000cc000000cc000000cc0cccc0ccc00000c00cccccccc0000cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c00cc00cccccccccccc00ccccc0000cccc0000cccc0000cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 03b00b30c00cc00ccc0660ccc09aa90cc066660cc066660ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 0b0bb0b003b00b30c077760009aaaa900677776006777760cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -413,22 +512,22 @@ c00cc00cccccccccccc00ccccc0000cccc0000cccc0000cccccccccccccccccccccccccccccccccc
 c013310c0833338007660c0c049999400677776006777760cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 0bb11bb00b1331b00660ccccc044440cc060060c06066060cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c000000cc000000cc00ccccccc0000cccc0cc0ccc0c00c0ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-33333333333333333333333333333333ccccccccccc828cccccc00cccccc0c0cccccc00ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-b88b8aa8bbbbbbbbbbbeaaebcaacbebbcccccccccc88a88ccc00330ccc00b030cccc0fe0cc0000cccccccccccccccccccccccccccccccccccccccccccccccccc
-bbb3b88bbbbbb33bbbbbeebbbccbeaebcccccccccc2a9a2cc08240ccc02bb30cccc07620c0b33b0ccccccccccccccccccccccccccccccccccccccccccccccccc
-33333bb33bbb33333bbbbb333bbbbeb3cccccccccc88988c08222a0c02988bb0cc0b350c0b33b370cccccccccccccccccccccccccccccccccccccccccccccccc
-33343333333334433333333333bbbb33c33cccccccc838cc0889980c08889b0ccc0310cc03b77730cccccccccccccccccccccccccccccccccccccccccccccccc
-994443344333994423333394433333343bb3c33ccccc3cbc0888880c0898820cc0400cccc03bb30ccccccccccccccccccccccccccccccccccccccccccccccccc
-24442994422499242244299442333394c33b3b3ccccc3bccc08880cc028820cc040ccccccc0330cccccccccccccccccccccccccccccccccccccccccccccccccc
-44442244444442244444224442244994ccc3b3cccccc3ccccc000cccc0000cccc0ccccccccc00ccccccccccccccccccccccccccccccccccccccccccccccccccc
-44444444444444444444444444444444c000000ccc0000ccccc00ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-499944444444499449944444444444440efffff0c0effe0ccc08800cccc0ccccc000c00ccc0000cccccccccccccccccccccccccccccccccccccccccccccccccc
-4999244444442994299499444444444402efeff00efe77e0cc082770cc090ccc02f70f70c08ee70ccccccccccccccccccccccccccccccccccccccccccccccccc
-49992444444422442244992444444444022efef00fe77770c0777f70c00a00cc02ef2ef0c0288e0ccccccccccccccccccccccccccccccccccccccccccccccccc
-4422244449944444444442244444444402e2eff00fee77f0077ff47009aaa90c02eeeee0c0288e0ccccccccccccccccccccccccccccccccccccccccccccccccc
-44444994499244444994444444444444022e2ef00efeefe00ff4400cc09a90ccc02eee0cc082280ccccccccccccccccccccccccccccccccccccccccccccccccc
-44442994442244444992444444444444022222e0c0effe0c04400ccc09a0a90ccc02e0cccc0000cccccccccccccccccccccccccccccccccccccccccccccccccc
-44442244444444444422444444444444c000000ccc0000ccc00cccccc00c00ccccc00ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+33333333333333333333333333333333ccccccccccc828cccccc00cccccc0c0cccccc00cccc00ccccccccccccccccccccccccccccccccccccccccccccccccccc
+b88b8aa8bbbbbbbbbbbeaaebcaacbebbcccccccccc88a88ccc00330ccc00b030cccc0fe0cc08800ccccccccccccccccccccccccccccccccccccccccccccccccc
+bbb3b88bbbbbb33bbbbbeebbbccbeaebcccccccccc2a9a2cc08240ccc02bb30cccc07620cc082770cccccccccccccccccccccccccccccccccccccccccccccccc
+33333bb33bbb33333bbbbb333bbbbeb3cccccccccc88988c08222a0c02988bb0cc0b350cc0777f70cccccccccccccccccccccccccccccccccccccccccccccccc
+33343333333334433333333333bbbb33c33cccccccc838cc0889980c08889b0ccc0310cc077ff470cccccccccccccccccccccccccccccccccccccccccccccccc
+994443344333994423333394433333343bb3c33ccccc3cbc0888880c0898820cc0400ccc0ff4400ccccccccccccccccccccccccccccccccccccccccccccccccc
+24442994422499242244299442333394c33b3b3ccccc3bccc08880cc028820cc040ccccc04400ccccccccccccccccccccccccccccccccccccccccccccccccccc
+44442244444442244444224442244994ccc3b3cccccc3ccccc000cccc0000cccc0ccccccc00ccccccccccccccccccccccccccccccccccccccccccccccccccccc
+44444444444444444444444444444444c000000ccc0000cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+499944444444499449944444444444440efffff0c0effe0ccc0000cccc0000ccc000c00cccc0cccccccccccccccccccccccccccccccccccccccccccccccccccc
+4999244444442994299499444444444402efeff00efe77e0c0b33b0cc08ee70c02f70f70cc090ccccccccccccccccccccccccccccccccccccccccccccccccccc
+49992444444422442244992444444444022efef00fe777700b33b370c0288e0c02ef2ef0c00a00cccccccccccccccccccccccccccccccccccccccccccccccccc
+4422244449944444444442244444444402e2eff00fee77f003b77730c0288e0c02eeeee009aaa90ccccccccccccccccccccccccccccccccccccccccccccccccc
+44444994499244444994444444444444022e2ef00efeefe0c03bb30cc082280cc02eee0cc09a90cccccccccccccccccccccccccccccccccccccccccccccccccc
+44442994442244444992444444444444022222e0c0effe0ccc0330cccc0000cccc02e0cc09a0a90ccccccccccccccccccccccccccccccccccccccccccccccccc
+44442244444444444422444444444444c000000ccc0000ccccc00cccccccccccccc00cccc00c00cccccccccccccccccccccccccccccccccccccccccccccccccc
 ccccccccccccccccc000000cccc00cccc000000ccc0000ccccccccccccccccccc9c9cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cccccccccccccccc02888820cc0670cc0c777770c01cc10cccccc000000cccccccacccc9cccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 ccccccccc000000cc004400ccc0670cc01c7c77001c17710ccc00aaaaaa00ccccc9009accccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -510,7 +609,7 @@ c0000cccc0000cccccccccccccc0ccccccccc00ccccccccccccccccccccccccccccccccccccccccc
 0280c0220c082009aa90c03bb0010c0104400660cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c00ccc00ccc00cc0000ccc000cc0ccc0c00cc00ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 __gff__
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010101010000000000000000000000000f0303030100000000000000000000000000000001000000000000000000000000000000010000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010101010000101010100000000000000f0303030100000000000000000000000000000001000000000000000000000000000000010000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
 0000000000000000000000000000000000000000000000000000000000000000000000000000000055000055000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -519,10 +618,10 @@ __map__
 0000000000000000000000727300000000000000000000000000000000000000000000000000000055005455000000000000000000000000000000000000000000000000000000000000000000000000000000000000410000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000055000055000000000000000000000000000000000000000000000000000000000000000000000000000000000041000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000007071000000000000000000000000000000000000000000000000000000000000000000000055540055000000000000000000000000000000000000000000000000000000000000000000000000000000004100000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000007474740000000000000000000000000000000000000000000000000055000055000000000000000000000000000000000000000000000000000000000000000000000000000000410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000005050500074747400000000000052525200505050000000000000000065656565650000000055005455000041410000006565656500005454540000000000005454545400656565650000000000000041000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000052525200505050000000000000000000650065000000000055000055000000000000000065006500000000000000000000000000000000006500650000000000004100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000006667000052525200505050000000000000000000650065000000000055540055000041410000000065006500000000000000000000000000000000006500650000000000410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000047000000000000000049000000000000000000000000000000000000000000000000000055000055000000000000000000000000000000000000000000000000000000000000000000000000000000410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000005050500000480000007474740000000000505050000000000000000065656565650000000055005455000041410000006565656500005454540000000000005454545400656565650000000000000041000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000074747400000000000000000000505050000000000000000000650065000000000055000055000000000000000065006500000000000000000000000000000000006500650000000000004100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000006667000000000000505050000000000000000000650065000000000055540055000041410000000065006500000000000000000000000000000000006500650000000000410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 4500440041004400004500467677440000000000000000000000000000000000650065000000000055000055000000000000000065006500000000000000000000000000000000006500650000000041000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 4142434243424142424142434241424341404341424143414141414141414141414141404140434142414341414141414141414141414140414043414241434141414141414141414141414141414141410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 5153505351535053515350535153505300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -531,7 +630,7 @@ __map__
 5352535253525352535253525352535200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 5153505351535053515350535153505300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __sfx__
-00010000010500205002050040501a6501a6501a6501d0501b6501d0501d0501965019650176501a0501865015650156501565016650156501865013650156500b05011650176501865003050000503405037050
+0002000017550145501155011550165501f550045002e500000000050000500005000050001500015000250003500035000450000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000267002670026700247001f7001c7001b7001c7001c700000000000000000000000000000000000000000000000000000000000000000000000000000
 __music__
 00 01024344
